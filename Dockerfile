@@ -2,7 +2,7 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# تثبيت مكتبات النظام المطلوبة لـ OpenCV و rembg (استبدال libgl1-mesa-glx بـ libgl1)
+# تثبيت مكتبات النظام
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
@@ -10,6 +10,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# تنزيل الموديلات مسبقاً أثناء بناء الحاوية لمنع التعليق أثناء الطلبات
+RUN python -c "from rembg import new_session; new_session('isnet-general-use')"
 
 COPY . .
 
