@@ -1,3 +1,4 @@
+import threading
 from fastapi import FastAPI, HTTPException, Response
 import requests
 from io import BytesIO
@@ -15,6 +16,21 @@ def get_session(model_name):
     if model_name not in sessions:
         sessions[model_name] = new_session(model_name)
     return sessions[model_name]
+
+
+def preload_models():
+    # تحميل الموديل في الخلفية بعد إقلاع السيرفر، حتى لا يتأخر فتح المنفذ
+    for model_name in MODEL_CHAIN:
+        try:
+            get_session(model_name)
+            print(f"Model '{model_name}' preloaded successfully")
+        except Exception as e:
+            print(f"Failed to preload model '{model_name}': {e}")
+
+
+@app.on_event("startup")
+def startup_event():
+    threading.Thread(target=preload_models, daemon=True).start()
 
 
 def analyze_alpha_content(png_bytes):
