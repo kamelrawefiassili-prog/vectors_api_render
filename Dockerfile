@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# تنزيل الموديلات مسبقاً أثناء بناء الحاوية لمنع التعليق أثناء الطلبات
-RUN python -c "from rembg import new_session; new_session('isnet-general-use')"
+# تنزيل الموديلات المستخدمة كلياً أثناء البناء لمنع أي تنزيل أثناء الطلبات
+RUN python -c "from rembg import new_session; new_session('isnet-general-use'); new_session('u2net')"
 
 COPY . .
 
