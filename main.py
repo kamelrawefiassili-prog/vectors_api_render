@@ -8,7 +8,6 @@ import uvicorn
 
 app = FastAPI(title="rembg-api")
 
-# حفظ الجلسات في الذاكرة لعدم إعادة تحميل الموديل عند كل طلب
 sessions = {}
 MODEL_CHAIN = ["isnet-general-use", "u2net"]
 
@@ -52,7 +51,6 @@ def is_result_acceptable(visible_fraction, bbox_density):
     return visible_fraction >= MIN_VISIBLE_FRACTION and bbox_density >= MIN_BBOX_DENSITY
 
 
-# [إضافة أساسية]: مسار فحص الحالة لإبقاء السيرفر نشطاً عبر UptimeRobot
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
@@ -72,6 +70,11 @@ def remove_bg(url: str):
         input_image = Image.open(BytesIO(res.content))
         input_image = ImageOps.exif_transpose(input_image)
         input_image = input_image.convert("RGB")
+
+        # [تعديل هام جداً]: تصغير أبعاد الصور الضخمة لمنع الامتلاء وتجميد الـ RAM
+        MAX_DIMENSION = 1200
+        if max(input_image.size) > MAX_DIMENSION:
+            input_image.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.Resampling.LANCZOS)
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to download/open source image: {str(e)}")
@@ -107,6 +110,5 @@ def remove_bg(url: str):
 
 
 if __name__ == "__main__":
-    # تعديل البورت الافتراضي إلى 10000 ليتطابق مع Render و Dockerfile
     port = int(os.environ.get("PORT", 10000))
     uvicorn.run(app, host="0.0.0.0", port=port)
