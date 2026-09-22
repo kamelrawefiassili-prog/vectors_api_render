@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-requests
-pillow
-numpy
 rembg[cpu]
+pillow
+requests
+numpy
