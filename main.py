@@ -8,7 +8,7 @@ from rembg import remove, new_session
 app = FastAPI()
 
 sessions = {}
-MODEL_CHAIN = ["isnet-general-use", "u2net"]
+MODEL_CHAIN = ["u2netp"]
 
 
 def get_session(model_name):
@@ -40,6 +40,11 @@ def is_result_acceptable(visible_fraction, bbox_density):
     MIN_VISIBLE_FRACTION = 0.005
     MIN_BBOX_DENSITY = 0.15
     return visible_fraction >= MIN_VISIBLE_FRACTION and bbox_density >= MIN_BBOX_DENSITY
+
+
+@app.get("/")
+def root():
+    return {"status": "ok"}
 
 
 @app.get("/remove_bg")
@@ -82,8 +87,3 @@ def remove_bg(url: str):
         status_code=422,
         detail=f"Background removal failed for all models. {last_error}. Diagnostics: {' | '.join(diagnostics)}"
     )
-
-
-@app.get("/")
-def root():
-    return {"status": "ok"}
