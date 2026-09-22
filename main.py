@@ -8,42 +8,36 @@ from PIL import Image, ImageOps
 import uvicorn
 import onnxruntime as ort
 
-# تقييد استهلاك ONNX لموارد المعالج للعمل بسلاسة على Render
+# إعدادات ضغط استهلاك الذاكرة والمعالج لبيئة Render
 ort_options = ort.SessionOptions()
 ort_options.intra_op_num_threads = 1
 ort_options.inter_op_num_threads = 1
 ort_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+ort_options.enable_cpu_mem_arena = False  # منع ONNX من حجز كتل ذاكرة ضخمة مسبقاً
 
 app = FastAPI(title="rembg-api")
 
 current_session = None
 current_model_name = None
 
-def get_session(model_name):
+def get_session(model_name: str):
     global current_session, current_model_name
     from rembg import new_session
     
-    # إعادة استخدام الجلسة إذا كانت نفس الموديل المطلوب
     if current_session is not None and current_model_name == model_name:
         return current_session
     
-    # تفريغ الذاكرة من الموديل السكني القديم لمنع تجاوز 512MB RAM
+    # تفريغ الذاكرة فوراً قبل تحميل موديل جديد
     current_session = None
     gc.collect()
     
-    current_session = new_session(model_name, providers=['CPUExecutionProvider'], session_options=ort_options)
+    current_session = new_session(
+        model_name, 
+        providers=['CPUExecutionProvider'], 
+        session_options=ort_options
+    )
     current_model_name = model_name
     return current_session
-
-@app.on_event("startup")
-def startup_event():
-    # تحميل الموديل الأساسي في الذاكرة فور تشغيل السيرفر
-    try:
-        print("Pre-loading default model into memory...")
-        get_session("isnet-general-use")
-        print("Model pre-loaded successfully.")
-    except Exception as e:
-        print(f"Pre-loading failed: {e}")
 
 def analyze_alpha_content(png_bytes):
     img = Image.open(BytesIO(png_bytes)).convert("RGBA")
@@ -93,8 +87,8 @@ def remove_bg(url: str):
         input_image = ImageOps.exif_transpose(input_image)
         input_image = input_image.convert("RGB")
 
-        # تصغير الصورة لحماية السيرفر من الامتلاء ولتسريع المعالجة
-        MAX_DIMENSION = 800
+        # تقليل أبعاد الصورة إلى 700px لتسريع المعالجة وتقليل استخدام الذاكرة
+        MAX_DIMENSION = 700
         if max(input_image.size) > MAX_DIMENSION:
             input_image.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.Resampling.LANCZOS)
 
